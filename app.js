@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 
 app.use(cors({
-  origin: "[https://658dbf0f5e2c0516effdfcd3--ecommerce-clone-app.netlify.app/]",
+  origin: ['https://ecommerce-clone-app.netlify.app/'],
   credentials: true
 }));
 
