@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 
 app.use(cors({
-  origin: 'https://ecommerce-clone-app.netlify.app',
+  origin: 'https://patilorganics.vercel.app',
   credentials: true
 }));
 
