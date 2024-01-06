@@ -39,7 +39,7 @@ router.post("/create-shop", catchAsyncErrors(async (req, res, next) => {
 
     const activationToken = createActivationToken(seller);
 
-    const activationUrl = `https://patilorganics.vercel.app/activation/${activationToken}`;
+    const activationUrl = `https://patilorganics.vercel.app/seller/activation/${activationToken}`;
 
     try {
       await sendMail({
