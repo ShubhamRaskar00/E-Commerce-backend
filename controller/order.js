@@ -6,6 +6,7 @@ const { isAuthenticated, isSeller, isAdmin } = require("../middleware/auth");
 const Order = require("../model/order");
 const Shop = require("../model/shop");
 const Product = require("../model/product");
+const sendMail = require("../utils/sendMail");
 
 // create new order
 router.post(
@@ -37,13 +38,101 @@ router.post(
           paymentInfo,
         });
         orders.push(order);
+        console.log(cart[0].shop.name, items);
+      }
+
+      // user Email
+      try {
+        await sendMail({
+          email: user.email,
+          subject: "Your Order is Confirmed - Thank You for Shopping with Us!",
+          message: `Dear ${user.name},
+            
+We are thrilled to inform you that your recent order has been successfully processed and confirmed. Thank you for choosing SR Production for your purchase.
+
+Order Details:
+
+Order Number: ${cart[0]._id}
+Total Amount: ${totalPrice}
+Shipping Details:
+
+Shipping Address: ${shippingAddress.address1}, ${shippingAddress.city}, ${shippingAddress.zipCode}
+
+Your satisfaction is our priority, and we are diligently working to prepare and dispatch your order. You will receive a shipping confirmation email with tracking details as soon as your package is on its way.
+Should you have any queries or require further assistance, feel free to contact our customer support team at ${cart[0].shop.phoneNumber}.
+
+Thank you once again for choosing us. We truly appreciate your trust and loyalty.
+
+Warm regards,
+SR Production
+`,
+        });
+        res.status(201).json({
+          success: true,
+          message: `success`,
+        });
+      } catch (error) {
+        return next(new ErrorHandler(error.message, 500));
+      }
+      // Seller Email
+      try {
+        let itemDetails = []
+        for (const [shopId, items] of shopItemsMap) {
+          itemDetails = items
+          .map((item, index) => {
+            return `${index + 1}. ${item.name} - Qty: ${item.qty} - Price: ${totalPrice}`;
+          })
+          .join("\n");
+        }
+        
+        await sendMail({
+          email: cart[0].shop.email,
+          subject: `New Order Received - Order #${cart[0]._id}`,
+          message: `Dear ${cart[0].shop.name},
+
+We are excited to inform you that a new order has been placed on SR Production. Here are the details:
+
+Order Details:
+
+Order Number: ${cart[0]._id}
+Total Amount: ${totalPrice}
+Customer Details:
+
+Customer Name: ${user.name}
+Email Address: ${user.email}
+Shipping Address: ${shippingAddress.address1}, ${shippingAddress.city}, ${
+            shippingAddress.zipCode
+          }
+Ordered Items:
+${itemDetails}
+
+Please prepare the items for shipment and ensure they are packed securely to guarantee a smooth delivery experience for our valued customer.
+
+Shipping Instructions:
+
+Feel free to reach out to the customer at ${user.email} or ${
+            user.phoneNumber || ""
+          } for any order-related queries or to provide updates on the shipping status.
+
+Thank you for your prompt attention to this order. We greatly appreciate your commitment to ensuring customer satisfaction.
+
+Best regards,
+
+SR Production
+`,
+        });
+        res.status(201).json({
+          success: true,
+          message: `success`,
+        });
+      } catch (error) {
+        return next(new ErrorHandler(error.message, 500));
       }
 
       res.status(201).json({
         success: true,
         orders,
       });
-      console.log()
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
     }
@@ -112,7 +201,7 @@ router.put(
       if (req.body.status === "Delivered") {
         order.deliveredAt = Date.now();
         order.paymentInfo.status = "Succeeded";
-        const serviceCharge = order.totalPrice * .10;
+        const serviceCharge = order.totalPrice * 0.1;
         await updateSellerInfo(order.totalPrice - serviceCharge);
       }
 
@@ -134,7 +223,7 @@ router.put(
 
       async function updateSellerInfo(amount) {
         const seller = await Shop.findById(req.seller.id);
-        
+
         seller.availableBalance = amount;
 
         await seller.save();
